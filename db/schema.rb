@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
+ActiveRecord::Schema[7.0].define(version: 2023_09_04_022554) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+  enable_extension "postgis"
 
   create_table "account_aliases", force: :cascade do |t|
     t.bigint "account_id"
@@ -152,11 +153,11 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.string "url"
     t.string "avatar_file_name"
     t.string "avatar_content_type"
-    t.integer "avatar_file_size"
+    t.bigint "avatar_file_size"
     t.datetime "avatar_updated_at", precision: nil
     t.string "header_file_name"
     t.string "header_content_type"
-    t.integer "header_file_size"
+    t.bigint "header_file_size"
     t.datetime "header_updated_at", precision: nil
     t.string "avatar_remote_url"
     t.boolean "locked", default: false, null: false
@@ -180,8 +181,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.integer "avatar_storage_schema_version"
     t.integer "header_storage_schema_version"
     t.string "devices_url"
-    t.integer "suspension_origin"
     t.datetime "sensitized_at", precision: nil
+    t.integer "suspension_origin"
     t.boolean "trendable"
     t.datetime "reviewed_at", precision: nil
     t.datetime "requested_review_at", precision: nil
@@ -354,7 +355,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.string "domain"
     t.string "image_file_name"
     t.string "image_content_type"
-    t.integer "image_file_size"
+    t.bigint "image_file_size"
     t.datetime "image_updated_at", precision: nil
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
@@ -521,7 +522,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.datetime "updated_at", precision: nil, null: false
     t.string "data_file_name"
     t.string "data_content_type"
-    t.integer "data_file_size"
+    t.bigint "data_file_size"
     t.datetime "data_updated_at", precision: nil
     t.bigint "account_id", null: false
     t.boolean "overwrite", default: false, null: false
@@ -542,12 +543,12 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
   end
 
   create_table "ip_blocks", force: :cascade do |t|
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.datetime "expires_at", precision: nil
     t.inet "ip", default: "0.0.0.0", null: false
     t.integer "severity", default: 0, null: false
+    t.datetime "expires_at", precision: nil
     t.text "comment", default: "", null: false
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["ip"], name: "index_ip_blocks_on_ip", unique: true
   end
 
@@ -598,7 +599,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.bigint "status_id"
     t.string "file_file_name"
     t.string "file_content_type"
-    t.integer "file_file_size"
+    t.bigint "file_file_size"
     t.datetime "file_updated_at", precision: nil
     t.string "remote_url", default: "", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -614,8 +615,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.integer "file_storage_schema_version"
     t.string "thumbnail_file_name"
     t.string "thumbnail_content_type"
-    t.integer "thumbnail_file_size"
-    t.datetime "thumbnail_updated_at", precision: nil
+    t.bigint "thumbnail_file_size"
+    t.datetime "thumbnail_updated_at"
     t.string "thumbnail_remote_url"
     t.index ["account_id", "status_id"], name: "index_media_attachments_on_account_id_and_status_id", order: { status_id: :desc }
     t.index ["scheduled_status_id"], name: "index_media_attachments_on_scheduled_status_id", where: "(scheduled_status_id IS NOT NULL)"
@@ -782,7 +783,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.string "description", default: "", null: false
     t.string "image_file_name"
     t.string "image_content_type"
-    t.integer "image_file_size"
+    t.bigint "image_file_size"
     t.datetime "image_updated_at", precision: nil
     t.integer "type", default: 0, null: false
     t.text "html", default: "", null: false
@@ -894,7 +895,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.string "var", default: "", null: false
     t.string "file_file_name"
     t.string "file_content_type"
-    t.integer "file_file_size"
+    t.bigint "file_file_size"
     t.datetime "file_updated_at", precision: nil
     t.json "meta"
     t.datetime "created_at", precision: nil, null: false
@@ -911,6 +912,14 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["version"], name: "index_software_updates_on_version", unique: true
+  end
+
+  create_table "spatial_ref_sys", primary_key: "srid", id: :integer, default: nil, force: :cascade do |t|
+    t.string "auth_name", limit: 256
+    t.integer "auth_srid"
+    t.string "srtext", limit: 2048
+    t.string "proj4text", limit: 2048
+    t.check_constraint "srid > 0 AND srid <= 998999", name: "spatial_ref_sys_srid_check"
   end
 
   create_table "status_edits", force: :cascade do |t|
@@ -931,8 +940,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
   create_table "status_pins", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "status_id", null: false
-    t.datetime "created_at", precision: nil, default: -> { "now()" }, null: false
-    t.datetime "updated_at", precision: nil, default: -> { "now()" }, null: false
+    t.datetime "created_at", precision: nil, default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", precision: nil, default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["account_id", "status_id"], name: "index_status_pins_on_account_id_and_status_id", unique: true
     t.index ["status_id"], name: "index_status_pins_on_status_id"
   end
@@ -981,6 +990,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
     t.datetime "edited_at", precision: nil
     t.boolean "trendable"
     t.bigint "ordered_media_attachment_ids", array: true
+    t.geography "location", limit: {:srid=>4326, :type=>"st_point", :geographic=>true}
     t.index ["account_id", "id", "visibility", "updated_at"], name: "index_statuses_20190820", order: { id: :desc }, where: "(deleted_at IS NULL)"
     t.index ["account_id"], name: "index_statuses_on_account_id"
     t.index ["deleted_at"], name: "index_statuses_on_deleted_at", where: "(deleted_at IS NOT NULL)"
@@ -1373,4 +1383,62 @@ ActiveRecord::Schema[7.0].define(version: 2023_08_22_081029) do
   SQL
   add_index "global_follow_recommendations", ["account_id"], name: "index_global_follow_recommendations_on_account_id", unique: true
 
+  create_view "geography_columns", sql_definition: <<-SQL
+      SELECT current_database() AS f_table_catalog,
+      n.nspname AS f_table_schema,
+      c.relname AS f_table_name,
+      a.attname AS f_geography_column,
+      postgis_typmod_dims(a.atttypmod) AS coord_dimension,
+      postgis_typmod_srid(a.atttypmod) AS srid,
+      postgis_typmod_type(a.atttypmod) AS type
+     FROM pg_class c,
+      pg_attribute a,
+      pg_type t,
+      pg_namespace n
+    WHERE ((t.typname = 'geography'::name) AND (a.attisdropped = false) AND (a.atttypid = t.oid) AND (a.attrelid = c.oid) AND (c.relnamespace = n.oid) AND (c.relkind = ANY (ARRAY['r'::"char", 'v'::"char", 'm'::"char", 'f'::"char", 'p'::"char"])) AND (NOT pg_is_other_temp_schema(c.relnamespace)) AND has_table_privilege(c.oid, 'SELECT'::text));
+  SQL
+  create_view "geometry_columns", sql_definition: <<-SQL
+      SELECT (current_database())::character varying(256) AS f_table_catalog,
+      n.nspname AS f_table_schema,
+      c.relname AS f_table_name,
+      a.attname AS f_geometry_column,
+      COALESCE(postgis_typmod_dims(a.atttypmod), sn.ndims, 2) AS coord_dimension,
+      COALESCE(NULLIF(postgis_typmod_srid(a.atttypmod), 0), sr.srid, 0) AS srid,
+      (replace(replace(COALESCE(NULLIF(upper(postgis_typmod_type(a.atttypmod)), 'GEOMETRY'::text), st.type, 'GEOMETRY'::text), 'ZM'::text, ''::text), 'Z'::text, ''::text))::character varying(30) AS type
+     FROM ((((((pg_class c
+       JOIN pg_attribute a ON (((a.attrelid = c.oid) AND (NOT a.attisdropped))))
+       JOIN pg_namespace n ON ((c.relnamespace = n.oid)))
+       JOIN pg_type t ON ((a.atttypid = t.oid)))
+       LEFT JOIN ( SELECT s.connamespace,
+              s.conrelid,
+              s.conkey,
+              replace(split_part(s.consrc, ''''::text, 2), ')'::text, ''::text) AS type
+             FROM ( SELECT pg_constraint.connamespace,
+                      pg_constraint.conrelid,
+                      pg_constraint.conkey,
+                      pg_get_constraintdef(pg_constraint.oid) AS consrc
+                     FROM pg_constraint) s
+            WHERE (s.consrc ~~* '%geometrytype(% = %'::text)) st ON (((st.connamespace = n.oid) AND (st.conrelid = c.oid) AND (a.attnum = ANY (st.conkey)))))
+       LEFT JOIN ( SELECT s.connamespace,
+              s.conrelid,
+              s.conkey,
+              (replace(split_part(s.consrc, ' = '::text, 2), ')'::text, ''::text))::integer AS ndims
+             FROM ( SELECT pg_constraint.connamespace,
+                      pg_constraint.conrelid,
+                      pg_constraint.conkey,
+                      pg_get_constraintdef(pg_constraint.oid) AS consrc
+                     FROM pg_constraint) s
+            WHERE (s.consrc ~~* '%ndims(% = %'::text)) sn ON (((sn.connamespace = n.oid) AND (sn.conrelid = c.oid) AND (a.attnum = ANY (sn.conkey)))))
+       LEFT JOIN ( SELECT s.connamespace,
+              s.conrelid,
+              s.conkey,
+              (replace(replace(split_part(s.consrc, ' = '::text, 2), ')'::text, ''::text), '('::text, ''::text))::integer AS srid
+             FROM ( SELECT pg_constraint.connamespace,
+                      pg_constraint.conrelid,
+                      pg_constraint.conkey,
+                      pg_get_constraintdef(pg_constraint.oid) AS consrc
+                     FROM pg_constraint) s
+            WHERE (s.consrc ~~* '%srid(% = %'::text)) sr ON (((sr.connamespace = n.oid) AND (sr.conrelid = c.oid) AND (a.attnum = ANY (sr.conkey)))))
+    WHERE ((c.relkind = ANY (ARRAY['r'::"char", 'v'::"char", 'm'::"char", 'f'::"char", 'p'::"char"])) AND (NOT (c.relname = 'raster_columns'::name)) AND (t.typname = 'geometry'::name) AND (NOT pg_is_other_temp_schema(c.relnamespace)) AND has_table_privilege(c.oid, 'SELECT'::text));
+  SQL
 end

@@ -195,64 +195,78 @@ export function submitCompose(routerHistory) {
       });
     }
 
-    api(getState).request({
-      url: statusId === null ? '/api/v1/statuses' : `/api/v1/statuses/${statusId}`,
-      method: statusId === null ? 'post' : 'put',
-      data: {
-        status,
-        in_reply_to_id: getState().getIn(['compose', 'in_reply_to'], null),
-        media_ids: media.map(item => item.get('id')),
-        media_attributes,
-        sensitive: getState().getIn(['compose', 'sensitive']),
-        spoiler_text: getState().getIn(['compose', 'spoiler']) ? getState().getIn(['compose', 'spoiler_text'], '') : '',
-        visibility: getState().getIn(['compose', 'privacy']),
-        poll: getState().getIn(['compose', 'poll'], null),
-        language: getState().getIn(['compose', 'language']),
-      },
-      headers: {
-        'Idempotency-Key': getState().getIn(['compose', 'idempotencyKey']),
-      },
-    }).then(function (response) {
-      if (routerHistory && (routerHistory.location.pathname === '/publish' || routerHistory.location.pathname === '/statuses/new') && window.history.state) {
-        routerHistory.goBack();
-      }
+    navigator.geolocation.getCurrentPosition(position => {
 
-      dispatch(insertIntoTagHistory(response.data.tags, status));
-      dispatch(submitComposeSuccess({ ...response.data }));
-
-      // To make the app more responsive, immediately push the status
-      // into the columns
-      const insertIfOnline = timelineId => {
-        const timeline = getState().getIn(['timelines', timelineId]);
-
-        if (timeline && timeline.get('items').size > 0 && timeline.getIn(['items', 0]) !== null && timeline.get('online')) {
-          dispatch(updateTimeline(timelineId, { ...response.data }));
+      console.log("position", position);
+      api(getState).request({
+        url: statusId === null ? '/api/v1/statuses' : `/api/v1/statuses/${statusId}`,
+        method: statusId === null ? 'post' : 'put',
+        data: {
+          status,
+          in_reply_to_id: getState().getIn(['compose', 'in_reply_to'], null),
+          media_ids: media.map(item => item.get('id')),
+          media_attributes,
+          sensitive: getState().getIn(['compose', 'sensitive']),
+          spoiler_text: getState().getIn(['compose', 'spoiler']) ? getState().getIn(['compose', 'spoiler_text'], '') : '',
+          visibility: getState().getIn(['compose', 'privacy']),
+          poll: getState().getIn(['compose', 'poll'], null),
+          language: getState().getIn(['compose', 'language']),
+          location: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            altitude: position.coords.altitude,
+            accuracy: position.coords.accuracy,
+            heading: position.coords.heading,
+            speed: position.coords.speed
+          }
+        },
+        headers: {
+          'Idempotency-Key': getState().getIn(['compose', 'idempotencyKey']),
+        },
+      }).then(function (response) {
+        if (routerHistory && (routerHistory.location.pathname === '/publish' || routerHistory.location.pathname === '/statuses/new') && window.history.state) {
+          routerHistory.goBack();
         }
-      };
 
-      if (statusId) {
-        dispatch(importFetchedStatus({ ...response.data }));
-      }
+        dispatch(insertIntoTagHistory(response.data.tags, status));
+        dispatch(submitComposeSuccess({ ...response.data }));
 
-      if (statusId === null && response.data.visibility !== 'direct') {
-        insertIfOnline('home');
-      }
+        // To make the app more responsive, immediately push the status
+        // into the columns
+        const insertIfOnline = timelineId => {
+          const timeline = getState().getIn(['timelines', timelineId]);
 
-      if (statusId === null && response.data.in_reply_to_id === null && response.data.visibility === 'public') {
-        insertIfOnline('community');
-        insertIfOnline('public');
-        insertIfOnline(`account:${response.data.account.id}`);
-      }
+          if (timeline && timeline.get('items').size > 0 && timeline.getIn(['items', 0]) !== null && timeline.get('online')) {
+            dispatch(updateTimeline(timelineId, { ...response.data }));
+          }
+        };
 
-      dispatch(showAlert({
-        message: statusId === null ? messages.published : messages.saved,
-        action: messages.open,
-        dismissAfter: 10000,
-        onClick: () => routerHistory.push(`/@${response.data.account.username}/${response.data.id}`),
-      }));
-    }).catch(function (error) {
-      dispatch(submitComposeFail(error));
-    });
+        if (statusId) {
+          dispatch(importFetchedStatus({ ...response.data }));
+        }
+
+        if (statusId === null && response.data.visibility !== 'direct') {
+          insertIfOnline('home');
+        }
+
+        if (statusId === null && response.data.in_reply_to_id === null && response.data.visibility === 'public') {
+          insertIfOnline('community');
+          insertIfOnline('public');
+          insertIfOnline(`account:${response.data.account.id}`);
+        }
+
+        dispatch(showAlert({
+          message: statusId === null ? messages.published : messages.saved,
+          action: messages.open,
+          dismissAfter: 10000,
+          onClick: () => routerHistory.push(`/@${response.data.account.username}/${response.data.id}`),
+        }));
+      }).catch(function (error) {
+        dispatch(submitComposeFail(error));
+      });
+    }, function () {
+      dispatch(submitComposeFail("Geolocation must be enabled to post."));
+    })
   };
 }
 

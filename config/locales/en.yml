@@ -1660,6 +1660,9 @@ en:
     edited_at_html: Edited %{date}
     errors:
       in_reply_not_found: The post you are trying to reply to does not appear to exist.
+    location:
+      required: Location is required.
+      out_of_bounds: Must be in the Wood River Valley to Post.
     open_in_web: Open in web
     over_character_limit: character limit of %{max} exceeded
     pin_errors:

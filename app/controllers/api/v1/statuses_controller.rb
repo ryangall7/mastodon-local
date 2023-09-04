@@ -64,6 +64,7 @@ class Api::V1::StatusesController < Api::BaseController
       visibility: status_params[:visibility],
       language: status_params[:language],
       scheduled_at: status_params[:scheduled_at],
+      location: status_params[:location],
       application: doorkeeper_token.application,
       poll: status_params[:poll],
       allowed_mentions: status_params[:allowed_mentions],
@@ -151,6 +152,14 @@ class Api::V1::StatusesController < Api::BaseController
         :hide_totals,
         :expires_in,
         options: [],
+      ],
+      location: [
+        :latitude,
+        :longitude,
+        :altitude,
+        :accuracy,
+        :heading,
+        :speed,
       ]
     )
   end

@@ -4,7 +4,13 @@ class GeoLocationValidator < ActiveModel::Validator
   def validate(status)
     nil unless status.local? && !status.reblog?
 
-    ## disallowed_hashtags = Tag.matching_name(Extractor.extract_hashtags(status.text)).reject(&:usable?)
-    ## status.errors.add(:text, I18n.t('statuses.disallowed_hashtags', tags: disallowed_hashtags.map(&:name).join(', '), count: disallowed_hashtags.size)) unless disallowed_hashtags.empty?
+    status.errors.add(:location, I18n.t('statuses.location.required')) if status.location.nil?
+
+    ketchum = RGeo::Geographic.spherical_factory.point(-114.3637, 43.6807)
+    distance_to_ketchum = location.distance(ketchum)
+
+    return unless distance_to_ketchum > 50_000
+
+    status.errors.add(:location, I18n.t('statuses.location.out_of_bounds'))
   end
 end

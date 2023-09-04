@@ -196,6 +196,7 @@ class PostStatusService < BaseService
       language: valid_locale_cascade(@options[:language], @account.user&.preferred_posting_language, I18n.default_locale),
       application: @options[:application],
       rate_limit: @options[:with_rate_limit],
+      location: point_from_params,
     }.compact
   end
 
@@ -221,5 +222,17 @@ class PostStatusService < BaseService
       options_hash[:idempotency]     = nil
       options_hash[:with_rate_limit] = false
     end
+  end
+
+  def point_from_params
+    return if @options[:location].blank?
+
+    location = @options[:location]
+    latitude = location.fetch('latitude')
+    longitude = location.fetch('longitude')
+
+    return unless latitude.present? && longitude.present?
+
+    "POINT(#{longitude} #{latitude})"
   end
 end
